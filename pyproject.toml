@@ -1,0 +1,109 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling<2", "hatch-fancy-pypi-readme"]
+
+[project]
+name = "pymc-supply-chain"
+description = "Supply Chain Optimization Models in PyMC"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+dynamic = ["version", "readme"]
+maintainers = [{ name = "Your Company", email = "info@yourcompany.com" }]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: Apache Software License",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
+]
+
+dependencies = [
+    "arviz>=0.13.0",
+    "matplotlib>=3.5.1",
+    "numpy>=1.17",
+    "pandas",
+    "pydantic>=2.1.0",
+    "pymc>=5.24.1",
+    "pytensor>=2.31.3",
+    "scikit-learn>=1.1.1",
+    "seaborn>=0.12.2",
+    "xarray>=2024.1.0",
+    "xarray-einstats>=0.5.1",
+    "pyprojroot",
+    "pymc-extras>=0.4.0",
+    "networkx>=3.0",
+    "scipy>=1.10.0",
+    "pulp>=2.7.0",  # For linear programming
+    "plotly>=5.0.0",  # For interactive visualizations
+]
+
+[project.optional-dependencies]
+optimization = ["cvxpy>=1.3.0", "gurobipy", "cplex"]  # Advanced optimization solvers
+simulation = ["simpy>=4.0.0", "mesa>=2.0.0"]  # Discrete event simulation
+docs = [
+    "sphinx",
+    "myst-parser",
+    "myst-nb",
+    "sphinx-copybutton",
+    "sphinx-autodoc-typehints",
+    "sphinx-design",
+    "nbsphinx",
+    "watermark",
+]
+lint = ["mypy", "pandas-stubs", "pre-commit>=2.19.0", "ruff>=0.1.4"]
+test = [
+    "pytest>=7.0.1",
+    "pytest-cov>=3.0.0",
+    "pytest-mock>=3.14.0",
+]
+
+[tool.hatch.version]
+path = "pymc_supply_chain/version.py"
+
+[tool.hatch.metadata.hooks.fancy-pypi-readme]
+content-type = "text/markdown"
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+path = "README.md"
+
+[project.urls]
+repository = "https://github.com/yourcompany/pymc-supply-chain"
+homepage = "https://www.pymc-supply-chain.io"
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = ["B", "D", "DOC", "E", "F", "I", "RUF", "S", "UP", "W"]
+pydocstyle.convention = "numpy"
+ignore = [
+    "B008",   # Do not perform calls in argument defaults
+    "B904",   # raise-without-from-inside-except
+    "RUF001", # String contains ambiguous character
+    "RUF002", # Docstring contains ambiguous character
+    "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
+]
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 120
+
+[tool.pytest.ini_options]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=pymc_supply_chain",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+]
+testpaths = "tests"
+
+[tool.mypy]
+files = "pymc_supply_chain/*.py"
+plugins = "numpy.typing.mypy_plugin"
