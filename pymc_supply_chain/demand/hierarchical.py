@@ -16,15 +16,15 @@ class HierarchicalDemandModel(DemandForecastModel):
     This model handles:
     - Multiple products across multiple locations
     - Hierarchical structure (e.g., SKU -> Category -> Total)
-    - Partial pooling for improved estimates
+    - Adaptive partial pooling learned from data
     - Cross-location and cross-product learning
     
     Attributes
     ----------
     hierarchy_cols : list
         Column names defining hierarchy (e.g., ['region', 'store', 'product'])
-    pooling_strength : float
-        Strength of hierarchical pooling (0=no pooling, 1=complete pooling)
+    distribution : str
+        Distribution for demand modeling (prevents negative forecasts)
     """
     
     def __init__(
@@ -32,11 +32,11 @@ class HierarchicalDemandModel(DemandForecastModel):
         hierarchy_cols: List[str],
         date_column: str = "date",
         target_column: str = "demand",
-        pooling_strength: float = 0.5,
         seasonality: Optional[int] = None,
         include_trend: bool = True,
         include_seasonality: bool = True,
         external_regressors: Optional[List[str]] = None,
+        distribution: str = "negative_binomial",
         model_config: Optional[Dict[str, Any]] = None,
         sampler_config: Optional[Dict[str, Any]] = None,
     ):
@@ -45,9 +45,9 @@ class HierarchicalDemandModel(DemandForecastModel):
         Parameters
         ----------
         hierarchy_cols : list of str
-            Columns defining the hierarchy
-        pooling_strength : float
-            Hierarchical pooling strength (0-1)
+            Columns defining the hierarchy (e.g., ['region', 'store', 'product'])
+        distribution : str
+            Distribution for demand: 'negative_binomial', 'poisson', 'gamma', 'normal'
         Other parameters as in DemandForecastModel
         """
         super().__init__(
@@ -57,11 +57,11 @@ class HierarchicalDemandModel(DemandForecastModel):
             include_trend=include_trend,
             include_seasonality=include_seasonality,
             external_regressors=external_regressors,
+            distribution=distribution,
             model_config=model_config,
             sampler_config=sampler_config,
         )
         self.hierarchy_cols = hierarchy_cols
-        self.pooling_strength = pooling_strength
         self._hierarchy_mapping = {}
         
     def _create_hierarchy_mapping(self, X: pd.DataFrame) -> Dict[str, np.ndarray]:
@@ -145,11 +145,11 @@ class HierarchicalDemandModel(DemandForecastModel):
                 mu_hyper = pm.Normal(f"{col}_mu_hyper", mu=0, sigma=1)
                 sigma_hyper = pm.HalfNormal(f"{col}_sigma_hyper", sigma=1)
                 
-                # Level-specific effects
+                # Level-specific effects (let model learn pooling strength)
                 intercepts[col] = pm.Normal(
                     f"{col}_intercept",
                     mu=mu_hyper,
-                    sigma=sigma_hyper * (1 - self.pooling_strength),
+                    sigma=sigma_hyper,
                     dims=col
                 )
             
@@ -220,20 +220,186 @@ class HierarchicalDemandModel(DemandForecastModel):
             for col in self.hierarchy_cols:
                 mu = mu + intercepts[col][hierarchy_idx[col]]
                 
-            # Observation noise (can vary by group)
-            noise_sigma = pm.HalfNormal("noise_sigma", sigma=y.std())
-            
-            # Likelihood
-            pm.Normal(
-                "demand",
-                mu=mu,
-                sigma=noise_sigma,
-                observed=demand_obs,
-                dims="obs_id"
-            )
+            # Likelihood based on chosen distribution
+            if self.distribution == "negative_binomial":
+                # Use log link to ensure mu > 0
+                log_mu = pm.Deterministic("log_mu", mu)
+                mu_pos = pm.math.exp(log_mu)
+                
+                alpha = pm.Exponential("alpha", 1.0)  # Dispersion parameter
+                pm.NegativeBinomial(
+                    "demand",
+                    mu=mu_pos,
+                    alpha=alpha,
+                    observed=demand_obs,
+                    dims="obs_id"
+                )
+                
+            elif self.distribution == "poisson":
+                # Use log link to ensure mu > 0  
+                log_mu = pm.Deterministic("log_mu", mu)
+                mu_pos = pm.math.exp(log_mu)
+                
+                pm.Poisson(
+                    "demand",
+                    mu=mu_pos,
+                    observed=demand_obs,
+                    dims="obs_id"
+                )
+                
+            elif self.distribution == "gamma":
+                # Use log link to ensure mu > 0
+                log_mu = pm.Deterministic("log_mu", mu)
+                mu_pos = pm.math.exp(log_mu)
+                
+                sigma = pm.HalfNormal("sigma", sigma=y.std())
+                pm.Gamma(
+                    "demand",
+                    mu=mu_pos,
+                    sigma=sigma,
+                    observed=demand_obs,
+                    dims="obs_id"
+                )
+                
+            else:  # normal (kept for backwards compatibility)
+                noise_sigma = pm.HalfNormal("noise_sigma", sigma=y.std())
+                pm.Normal(
+                    "demand",
+                    mu=mu,
+                    sigma=noise_sigma,
+                    observed=demand_obs,
+                    dims="obs_id"
+                )
             
         return model
     
+    def forecast(
+        self,
+        steps: int,
+        hierarchy_values: Dict[str, Any],
+        X_future: Optional[pd.DataFrame] = None,
+        frequency: Optional[str] = None,
+        include_history: bool = False,
+    ) -> pd.DataFrame:
+        """Generate hierarchical demand forecasts preserving hierarchy structure.
+        
+        Parameters
+        ----------
+        steps : int
+            Number of steps to forecast
+        hierarchy_values : dict
+            Specific hierarchy level values to forecast for (e.g., {'region': 'North', 'store': 'A'})
+        X_future : pd.DataFrame, optional
+            Future values of external regressors
+        frequency : str, optional
+            Pandas frequency string for future dates
+        include_history : bool
+            Whether to include historical fitted values
+            
+        Returns
+        -------
+        pd.DataFrame
+            Forecast results with credible intervals for the specific hierarchy level
+        """
+        if self._fit_result is None:
+            raise RuntimeError("Model must be fitted before forecasting")
+            
+        # Validate hierarchy values
+        missing_cols = set(self.hierarchy_cols) - set(hierarchy_values.keys())
+        if missing_cols:
+            raise ValueError(f"Missing hierarchy values for: {missing_cols}")
+            
+        # Generate future dates
+        last_date = pd.to_datetime(self._model.coords["time"][-1])
+        if frequency is None:
+            frequency = pd.infer_freq(self._model.coords["time"])
+            
+        future_dates = pd.date_range(
+            start=last_date + pd.Timedelta(1, frequency),
+            periods=steps,
+            freq=frequency
+        )
+        
+        # Prepare future data
+        t_future = np.arange(
+            len(self._model.coords["time"]),
+            len(self._model.coords["time"]) + steps
+        )
+        
+        # Get hierarchy indices for the specified values
+        hierarchy_indices = {}
+        for col, value in hierarchy_values.items():
+            if value not in self._hierarchy_mapping[col]:
+                raise ValueError(f"Unknown {col} value: {value}")
+            hierarchy_indices[col] = self._hierarchy_mapping[col][value]
+        
+        # Prepare external regressors if provided
+        if X_future is not None and self.external_regressors:
+            if len(X_future) != steps:
+                raise ValueError(f"X_future must have {steps} rows")
+            X_reg_future = X_future[self.external_regressors].values
+        else:
+            X_reg_future = np.zeros((steps, len(self.external_regressors))) if self.external_regressors else None
+        
+        # Create dummy hierarchy indices for future periods
+        future_hierarchy_data = {}
+        for col in self.hierarchy_cols:
+            future_hierarchy_data[f"{col}_idx"] = np.full(steps, hierarchy_indices[col])
+        
+        # Use proper PyMC forecasting
+        with self._model:
+            # Update data containers
+            pm.set_data({
+                "time_idx": t_future,
+                "season_idx": t_future % self.seasonality if (self.include_seasonality and self.seasonality) else t_future,
+                **future_hierarchy_data
+            })
+            
+            # Update external regressors if present
+            if self.external_regressors and X_reg_future is not None:
+                for i, reg in enumerate(self.external_regressors):
+                    pm.set_data({f"X_{reg}": X_reg_future[:, i]})
+            
+            # Set dummy observed data
+            pm.set_data({"demand_obs": np.zeros(steps)})
+            
+            # Sample posterior predictive
+            posterior_predictive = pm.sample_posterior_predictive(
+                self._fit_result,
+                var_names=["demand"],
+                progressbar=False,
+                predictions=True
+            )
+            
+        # Extract forecast results
+        forecast_samples = posterior_predictive.predictions["demand"]
+        
+        # Calculate summary statistics
+        forecast_mean = forecast_samples.mean(dim=["chain", "draw"]).values
+        forecast_std = forecast_samples.std(dim=["chain", "draw"]).values
+        forecast_lower = forecast_samples.quantile(0.025, dim=["chain", "draw"]).values
+        forecast_upper = forecast_samples.quantile(0.975, dim=["chain", "draw"]).values
+        
+        # Ensure non-negative forecasts for count/demand data
+        if self.distribution in ["negative_binomial", "poisson", "gamma"]:
+            forecast_lower = np.maximum(forecast_lower, 0)
+            forecast_mean = np.maximum(forecast_mean, 0)
+        
+        # Create results DataFrame with hierarchy information
+        results = pd.DataFrame({
+            "date": future_dates,
+            "forecast": forecast_mean,
+            "forecast_lower": forecast_lower,
+            "forecast_upper": forecast_upper,
+            "forecast_std": forecast_std,
+        })
+        
+        # Add hierarchy level information
+        for col, value in hierarchy_values.items():
+            results[col] = value
+        
+        return results
+
     def forecast_hierarchical(
         self,
         steps: int,

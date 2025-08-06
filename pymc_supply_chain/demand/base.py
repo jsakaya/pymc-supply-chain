@@ -7,6 +7,7 @@ import pandas as pd
 import pymc as pm
 import pytensor.tensor as pt
 from pymc.distributions.transforms import Interval
+from pymc.distributions import NegativeBinomial, Poisson, Gamma
 
 from pymc_supply_chain.base import SupplyChainModelBuilder
 
@@ -40,6 +41,7 @@ class DemandForecastModel(SupplyChainModelBuilder):
         include_trend: bool = True,
         include_seasonality: bool = True,
         external_regressors: Optional[List[str]] = None,
+        distribution: str = "negative_binomial",
         model_config: Optional[Dict[str, Any]] = None,
         sampler_config: Optional[Dict[str, Any]] = None,
     ):
@@ -59,6 +61,8 @@ class DemandForecastModel(SupplyChainModelBuilder):
             Whether to model seasonality
         external_regressors : list of str, optional
             Names of external regressor columns
+        distribution : str
+            Distribution for demand: 'negative_binomial', 'poisson', 'gamma', 'normal'
         model_config : dict, optional
             Model configuration
         sampler_config : dict, optional
@@ -71,6 +75,12 @@ class DemandForecastModel(SupplyChainModelBuilder):
         self.include_trend = include_trend
         self.include_seasonality = include_seasonality
         self.external_regressors = external_regressors or []
+        self.distribution = distribution
+        
+        # Validate distribution
+        valid_distributions = ['negative_binomial', 'poisson', 'gamma', 'normal']
+        if distribution not in valid_distributions:
+            raise ValueError(f"Distribution must be one of {valid_distributions}")
         
     def _detect_seasonality(self, dates: pd.Series) -> int:
         """Auto-detect seasonality from date frequency."""
@@ -169,17 +179,53 @@ class DemandForecastModel(SupplyChainModelBuilder):
             # Combine components
             mu = intercept + trend + seasonality + external_effect
             
-            # Observation noise
-            sigma = pm.HalfNormal("sigma", sigma=y.std())
-            
-            # Likelihood
-            pm.Normal(
-                "demand",
-                mu=mu,
-                sigma=sigma,
-                observed=demand_obs,
-                dims="obs_id"
-            )
+            # Likelihood based on chosen distribution
+            if self.distribution == "negative_binomial":
+                # Use log link to ensure mu > 0
+                mu_pos = pm.math.exp(mu)
+                
+                alpha = pm.Exponential("alpha", 1.0)  # Dispersion parameter
+                pm.NegativeBinomial(
+                    "demand",
+                    mu=mu_pos,
+                    alpha=alpha,
+                    observed=demand_obs,
+                    dims="obs_id"
+                )
+                
+            elif self.distribution == "poisson":
+                # Use log link to ensure mu > 0  
+                mu_pos = pm.math.exp(mu)
+                
+                pm.Poisson(
+                    "demand",
+                    mu=mu_pos,
+                    observed=demand_obs,
+                    dims="obs_id"
+                )
+                
+            elif self.distribution == "gamma":
+                # Use log link to ensure mu > 0
+                mu_pos = pm.math.exp(mu)
+                
+                sigma = pm.HalfNormal("sigma", sigma=y.std())
+                pm.Gamma(
+                    "demand",
+                    mu=mu_pos,
+                    sigma=sigma,
+                    observed=demand_obs,
+                    dims="obs_id"
+                )
+                
+            else:  # normal (kept for backwards compatibility)
+                sigma = pm.HalfNormal("sigma", sigma=y.std())
+                pm.Normal(
+                    "demand",
+                    mu=mu,
+                    sigma=sigma,
+                    observed=demand_obs,
+                    dims="obs_id"
+                )
             
         return model
     
@@ -190,7 +236,7 @@ class DemandForecastModel(SupplyChainModelBuilder):
         frequency: Optional[str] = None,
         include_history: bool = False,
     ) -> pd.DataFrame:
-        """Generate future demand forecasts.
+        """Generate future demand forecasts using proper PyMC patterns.
         
         Parameters
         ----------
@@ -228,72 +274,55 @@ class DemandForecastModel(SupplyChainModelBuilder):
             len(self._model.coords["time"]) + steps
         )
         
-        # Create a new model for prediction with different data size
-        with pm.Model(coords={"time": future_dates, "obs_id": np.arange(steps)}) as pred_model:
-            # Get posterior samples
-            intercept_samples = self._fit_result.posterior["intercept"].values.flatten()
-            sigma_samples = self._fit_result.posterior["sigma"].values.flatten()
+        # Prepare external regressors if provided
+        if X_future is not None and self.external_regressors:
+            if len(X_future) != steps:
+                raise ValueError(f"X_future must have {steps} rows")
+            X_reg_future = X_future[self.external_regressors].values
+        else:
+            X_reg_future = np.zeros((steps, len(self.external_regressors))) if self.external_regressors else None
+        
+        # Use proper PyMC forecasting with pm.set_data and sample_posterior_predictive
+        with self._model:
+            # Update data containers for forecasting
+            pm.set_data({
+                "time_idx": t_future,
+            })
             
-            if self.include_trend:
-                trend_samples = self._fit_result.posterior["trend_coef"].values.flatten()
-            else:
-                trend_samples = np.zeros_like(intercept_samples)
-                
+            # Update seasonality if used
             if self.include_seasonality and self.seasonality:
-                seasonal_samples = self._fit_result.posterior["seasonal_effects"].values
-                seasonal_samples = seasonal_samples.reshape(-1, seasonal_samples.shape[-1])
-            else:
-                seasonal_samples = None
+                pm.set_data({"season_idx": t_future % self.seasonality})
             
-            # Sample predictions manually using posterior samples
-            n_samples = len(intercept_samples)
-            forecasts = []
+            # Update external regressors if present
+            if self.external_regressors and X_reg_future is not None:
+                pm.set_data({"X_reg": X_reg_future})
             
-            for i in range(n_samples):
-                # Components for this sample
-                mu_forecast = intercept_samples[i] + trend_samples[i] * t_future
-                
-                if seasonal_samples is not None:
-                    seasonal_effect = seasonal_samples[i, t_future % self.seasonality]
-                    mu_forecast += seasonal_effect
-                    
-                # Sample from normal distribution
-                forecast_sample = np.random.normal(mu_forecast, sigma_samples[i])
-                forecasts.append(forecast_sample)
-                
-            forecasts = np.array(forecasts)
+            # Set dummy observed data for prediction (required by PyMC)
+            pm.set_data({"demand_obs": np.zeros(steps)})  # Will be ignored in prediction
             
-            # Create a simple posterior predictive structure
-            import xarray as xr
-            forecast_samples = type('obj', (object,), {
-                'posterior_predictive': {
-                    'demand': xr.DataArray(
-                        forecasts,
-                        dims=['sample', 'time'],
-                        coords={'sample': range(n_samples), 'time': future_dates}
-                    )
-                }
-            })()
+            # Sample posterior predictive
+            posterior_predictive = pm.sample_posterior_predictive(
+                self._fit_result,
+                var_names=["demand"],
+                progressbar=False,
+                predictions=True  # This tells PyMC we're making predictions
+            )
             
-        # Extract results
-        forecast_mean = forecast_samples.posterior_predictive["demand"].mean(
-            dim="sample"
-        ).values
-        forecast_std = forecast_samples.posterior_predictive["demand"].std(
-            dim="sample"
-        ).values
+        # Extract forecast results
+        forecast_samples = posterior_predictive.predictions["demand"]
+        
+        # Calculate summary statistics
+        forecast_mean = forecast_samples.mean(dim=["chain", "draw"]).values
+        forecast_std = forecast_samples.std(dim=["chain", "draw"]).values
         
         # Calculate prediction intervals
-        forecast_lower = np.percentile(
-            forecast_samples.posterior_predictive["demand"].values,
-            2.5,
-            axis=0
-        )
-        forecast_upper = np.percentile(
-            forecast_samples.posterior_predictive["demand"].values,
-            97.5,
-            axis=0
-        )
+        forecast_lower = forecast_samples.quantile(0.025, dim=["chain", "draw"]).values
+        forecast_upper = forecast_samples.quantile(0.975, dim=["chain", "draw"]).values
+        
+        # Ensure non-negative forecasts for count/demand data
+        if self.distribution in ["negative_binomial", "poisson", "gamma"]:
+            forecast_lower = np.maximum(forecast_lower, 0)
+            forecast_mean = np.maximum(forecast_mean, 0)
         
         # Create results DataFrame
         results = pd.DataFrame({

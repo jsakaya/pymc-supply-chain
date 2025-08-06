@@ -1,0 +1,158 @@
+{
+  "base_nb": {
+    "model": "base_nb",
+    "forecast_correctness": {
+      "model": "base_nb",
+      "success": false,
+      "error": "size does not match the broadcast shape of the parameters. (np.int64(120),), (np.int64(120),), (30,)\nApply node that caused the error: negative_binomial_rv{\"(),()->()\"}(RNG(<Generator(PCG64) at 0x161EFE6C0>), MakeVector{dtype='int64'}.0, ExpandDims{axis=0}.0, Composite{(i4 / (exp((i2 + (i0 * i1) + i3)) + i4))}.0)\nToposort index: 6\nInputs types: [RandomGeneratorType, TensorType(int64, shape=(1,)), TensorType(float64, shape=(1,)), TensorType(float64, shape=(None,))]\nInputs shapes: ['No shapes', (1,), (1,), (30,)]\nInputs strides: ['No strides', (8,), (8,), (8,)]\nInputs values: [Generator(PCG64) at 0x161EFE6C0, array([120]), array([25.23298819]), 'not shown']\nOutputs clients: [[output[1](negative_binomial_rv{\"(),()->()\"}.0)], [output[0](demand)]]\n\nBacktrace when the node is created (use PyTensor flag traceback__limit=N to make it longer):\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/test_statistical_validation.py\", line 568, in run_comprehensive_validation\n    model_results['forecast_correctness'] = self.test_forecast_correctness(model, data, model_name)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/test_statistical_validation.py\", line 161, in test_forecast_correctness\n    model.fit(train_data, draws=500, tune=500, chains=2, target_accept=0.85)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/pymc_supply_chain/base.py\", line 84, in fit\n    self._model = self.build_model(X, y)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/pymc_supply_chain/demand/base.py\", line 188, in build_model\n    pm.NegativeBinomial(\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/distribution.py\", line 657, in __new__\n    return super().__new__(cls, name, *args, **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/distribution.py\", line 529, in __new__\n    rv_out = cls.dist(*args, **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/discrete.py\", line 684, in dist\n    return super().dist([n, p], *args, **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/distribution.py\", line 598, in dist\n    return cls.rv_op(*dist_params, size=create_size, **kwargs)\n\nHINT: Use the PyTensor flag `exception_verbosity=high` for a debug print-out and storage map footprint of this Apply node."
+    },
+    "posterior_predictive_checks": {
+      "model": "base_nb",
+      "success": false,
+      "error": "module 'arviz' has no attribute 'sample_posterior_predictive'"
+    },
+    "distribution_compliance": {
+      "model": "base_nb",
+      "success": false,
+      "error": "module 'arviz' has no attribute 'sample_posterior_predictive'"
+    },
+    "overall_success": true
+  },
+  "base_poisson": {
+    "model": "base_poisson",
+    "forecast_correctness": {
+      "model": "base_poisson",
+      "success": false,
+      "error": "shape mismatch: objects cannot be broadcast to a single shape.  Mismatch is between arg 0 with shape (120,) and arg 1 with shape (30,).\nApply node that caused the error: poisson_rv{\"()->()\"}(RNG(<Generator(PCG64) at 0x1651492A0>), MakeVector{dtype='int64'}.0, Composite{exp((i2 + (i0 * i1) + i3))}.0)\nToposort index: 5\nInputs types: [RandomGeneratorType, TensorType(int64, shape=(1,)), TensorType(float64, shape=(None,))]\nInputs shapes: ['No shapes', (1,), (30,)]\nInputs strides: ['No strides', (8,), (8,)]\nInputs values: [Generator(PCG64) at 0x1651492A0, array([120]), 'not shown']\nOutputs clients: [[output[1](poisson_rv{\"()->()\"}.0)], [output[0](demand)]]\n\nBacktrace when the node is created (use PyTensor flag traceback__limit=N to make it longer):\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/test_statistical_validation.py\", line 568, in run_comprehensive_validation\n    model_results['forecast_correctness'] = self.test_forecast_correctness(model, data, model_name)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/test_statistical_validation.py\", line 161, in test_forecast_correctness\n    model.fit(train_data, draws=500, tune=500, chains=2, target_accept=0.85)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/pymc_supply_chain/base.py\", line 84, in fit\n    self._model = self.build_model(X, y)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/pymc_supply_chain/demand/base.py\", line 200, in build_model\n    pm.Poisson(\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/distribution.py\", line 657, in __new__\n    return super().__new__(cls, name, *args, **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/distribution.py\", line 529, in __new__\n    rv_out = cls.dist(*args, **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/discrete.py\", line 558, in dist\n    return super().dist([mu], *args, **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/distribution.py\", line 598, in dist\n    return cls.rv_op(*dist_params, size=create_size, **kwargs)\n\nHINT: Use the PyTensor flag `exception_verbosity=high` for a debug print-out and storage map footprint of this Apply node."
+    },
+    "posterior_predictive_checks": {
+      "model": "base_poisson",
+      "success": false,
+      "error": "module 'arviz' has no attribute 'sample_posterior_predictive'"
+    },
+    "distribution_compliance": {
+      "model": "base_poisson",
+      "success": false,
+      "error": "module 'arviz' has no attribute 'sample_posterior_predictive'"
+    },
+    "overall_success": true
+  },
+  "base_gamma": {
+    "model": "base_gamma",
+    "forecast_correctness": {
+      "model": "base_gamma",
+      "success": false,
+      "error": "shape mismatch: objects cannot be broadcast to a single shape.  Mismatch is between arg 0 with shape (120,) and arg 1 with shape (30,).\nApply node that caused the error: gamma_rv{\"(),()->()\"}(RNG(<Generator(PCG64) at 0x16587EF80>), MakeVector{dtype='int64'}.0, Composite{...}.1, Composite{...}.0)\nToposort index: 8\nInputs types: [RandomGeneratorType, TensorType(int64, shape=(1,)), TensorType(float64, shape=(None,)), TensorType(float64, shape=(None,))]\nInputs shapes: ['No shapes', (1,), (30,), (30,)]\nInputs strides: ['No strides', (8,), (8,), (8,)]\nInputs values: [Generator(PCG64) at 0x16587EF80, array([120]), 'not shown', 'not shown']\nOutputs clients: [[output[1](gamma_rv{\"(),()->()\"}.0)], [output[0](demand)]]\n\nBacktrace when the node is created (use PyTensor flag traceback__limit=N to make it longer):\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/test_statistical_validation.py\", line 647, in main\n    results = validator.run_comprehensive_validation()\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/test_statistical_validation.py\", line 568, in run_comprehensive_validation\n    model_results['forecast_correctness'] = self.test_forecast_correctness(model, data, model_name)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/test_statistical_validation.py\", line 161, in test_forecast_correctness\n    model.fit(train_data, draws=500, tune=500, chains=2, target_accept=0.85)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/pymc_supply_chain/base.py\", line 84, in fit\n    self._model = self.build_model(X, y)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/pymc_supply_chain/demand/base.py\", line 212, in build_model\n    pm.Gamma(\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/distribution.py\", line 529, in __new__\n    rv_out = cls.dist(*args, **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/continuous.py\", line 2366, in dist\n    return super().dist([alpha, scale], **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/distribution.py\", line 598, in dist\n    return cls.rv_op(*dist_params, size=create_size, **kwargs)\n\nHINT: Use the PyTensor flag `exception_verbosity=high` for a debug print-out and storage map footprint of this Apply node."
+    },
+    "posterior_predictive_checks": {
+      "model": "base_gamma",
+      "success": false,
+      "error": "module 'arviz' has no attribute 'sample_posterior_predictive'"
+    },
+    "distribution_compliance": {
+      "model": "base_gamma",
+      "success": false,
+      "error": "module 'arviz' has no attribute 'sample_posterior_predictive'"
+    },
+    "overall_success": true
+  },
+  "hierarchical": {
+    "model": "hierarchical",
+    "forecast_correctness": {
+      "model": "hierarchical",
+      "success": false,
+      "error": "Initial evaluation of model at starting point failed!\nStarting values:\n{'global_intercept': array(24.38230898), 'global_sigma_log__': array(-0.23846949), 'region_mu_hyper': array(-0.99903726), 'region_sigma_hyper_log__': array(-0.64620705), 'region_intercept': array([-0.68391574, -1.96100318, -1.52488898, -0.09272642]), 'store_mu_hyper': array(-0.76685395), 'store_sigma_hyper_log__': array(0.76928492), 'store_intercept': array([-1.53040271, -0.89621086, -1.24228251]), 'global_trend': array(-0.92681715), 'region_trend_sigma_log__': array(-2.60501531), 'region_trend': array([-0.5570333 , -0.84371011,  0.0428856 , -0.19345031]), 'seasonal_effects': array([-9.89067472e-02, -1.60281396e-01, -5.22519709e-01, -3.68974001e-01,\n        9.01158936e-01, -5.86852271e-01,  5.17367957e-01, -6.55534131e-01,\n       -8.17339054e-01, -9.19568825e-01,  5.93269253e-01, -5.66356441e-04]), 'alpha_log__': array(0.22806078)}\n\nLogp initial evaluation results:\n{'global_intercept': np.float64(-2.77), 'global_sigma': np.float64(-0.77), 'region_mu_hyper': np.float64(-1.42), 'region_sigma_hyper': np.float64(-1.01), 'region_intercept': np.float64(-4.96), 'store_mu_hyper': np.float64(-1.21), 'store_sigma_hyper': np.float64(-1.79), 'store_intercept': np.float64(-5.15), 'global_trend': np.float64(-41.57), 'region_trend_sigma': np.float64(-0.93), 'region_trend': np.float64(-90.43), 'seasonal_effects': np.float64(-13.11), 'alpha': np.float64(-1.03), 'demand': np.float64(-inf)}\nYou can call `model.debug()` for more details."
+    },
+    "posterior_predictive_checks": {
+      "model": "hierarchical",
+      "success": false,
+      "error": "Model not fitted"
+    },
+    "distribution_compliance": {
+      "model": "hierarchical",
+      "success": false,
+      "error": "Model not fitted"
+    },
+    "hierarchical_pooling": {
+      "model": "hierarchical",
+      "success": false,
+      "error": "size does not match the broadcast shape of the parameters. (np.int64(1800),), (np.int64(1800),), (10,)\nApply node that caused the error: negative_binomial_rv{\"(),()->()\"}(RNG(<Generator(PCG64) at 0x1656F8D60>), MakeVector{dtype='int64'}.0, ExpandDims{axis=0}.0, Composite{(i7 / (exp((i2 + (i6 * i1) + (i0 * i1) + i3 + i4 + i5)) + i7))}.0)\nToposort index: 9\nInputs types: [RandomGeneratorType, TensorType(int64, shape=(1,)), TensorType(float64, shape=(1,)), TensorType(float64, shape=(None,))]\nInputs shapes: ['No shapes', (1,), (1,), (10,)]\nInputs strides: ['No strides', (8,), (8,), (8,)]\nInputs values: [Generator(PCG64) at 0x1656F8D60, array([1800]), array([0.91538758]), 'not shown']\nOutputs clients: [[output[1](negative_binomial_rv{\"(),()->()\"}.0)], [output[0](demand)]]\n\nBacktrace when the node is created (use PyTensor flag traceback__limit=N to make it longer):\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/test_statistical_validation.py\", line 574, in run_comprehensive_validation\n    model_results['hierarchical_pooling'] = self.test_hierarchical_pooling(model, data)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/test_statistical_validation.py\", line 324, in test_hierarchical_pooling\n    model.fit(data, draws=500, tune=500, chains=2)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/pymc_supply_chain/base.py\", line 84, in fit\n    self._model = self.build_model(X, y)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/pymc_supply_chain/demand/hierarchical.py\", line 230, in build_model\n    pm.NegativeBinomial(\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/distribution.py\", line 657, in __new__\n    return super().__new__(cls, name, *args, **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/distribution.py\", line 529, in __new__\n    rv_out = cls.dist(*args, **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/discrete.py\", line 684, in dist\n    return super().dist([n, p], *args, **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/distribution.py\", line 598, in dist\n    return cls.rv_op(*dist_params, size=create_size, **kwargs)\n\nHINT: Use the PyTensor flag `exception_verbosity=high` for a debug print-out and storage map footprint of this Apply node."
+    },
+    "overall_success": true
+  },
+  "intermittent_zinb": {
+    "model": "intermittent_zinb",
+    "forecast_correctness": {
+      "model": "intermittent_zinb",
+      "success": false,
+      "error": "size does not match the broadcast shape of the parameters. (np.int64(120),), (np.int64(120),), (30,)\nApply node that caused the error: negative_binomial_rv{\"(),()->()\"}(RNG(<Generator(PCG64) at 0x1657EDB60>), MakeVector{dtype='int64'}.0, ExpandDims{axis=0}.0, Composite{(i3 / (exp((i2 + (i0 * i1))) + i3))}.0)\nToposort index: 13\nInputs types: [RandomGeneratorType, TensorType(int64, shape=(1,)), TensorType(float64, shape=(1,)), TensorType(float64, shape=(None,))]\nInputs shapes: ['No shapes', (1,), (1,), (30,)]\nInputs strides: ['No strides', (8,), (8,), (8,)]\nInputs values: [Generator(PCG64) at 0x1657EDB60, array([120]), array([0.23299893]), 'not shown']\nOutputs clients: [[output[2](negative_binomial_rv{\"(),()->()\"}.0)], [ExpandDims{axis=1}(negative_binomial_rv{\"(),()->()\"}.out)]]\n\nBacktrace when the node is created (use PyTensor flag traceback__limit=N to make it longer):\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/distribution.py\", line 529, in __new__\n    rv_out = cls.dist(*args, **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/mixture.py\", line 205, in dist\n    return super().dist([w, *comp_dists], **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/distribution.py\", line 598, in dist\n    return cls.rv_op(*dist_params, size=create_size, **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/mixture.py\", line 72, in rv_op\n    components = cls._resize_components(size, *components)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/mixture.py\", line 155, in _resize_components\n    return [change_dist_size(component, size) for component in components]\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/shape_utils.py\", line 285, in change_dist_size\n    new_dist = _change_dist_size(op, dist, new_size=new_size, expand=expand)\n  File \"/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/functools.py\", line 934, in wrapper\n    return dispatch(args[0].__class__)(*args, **kw)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/shape_utils.py\", line 312, in change_rv_size\n    new_rv = rv_node.op(*dist_params, size=new_size, dtype=rv.type.dtype)\n\nHINT: Use the PyTensor flag `exception_verbosity=high` for a debug print-out and storage map footprint of this Apply node."
+    },
+    "posterior_predictive_checks": {
+      "model": "intermittent_zinb",
+      "success": false,
+      "error": "module 'arviz' has no attribute 'sample_posterior_predictive'"
+    },
+    "distribution_compliance": {
+      "model": "intermittent_zinb",
+      "success": false,
+      "error": "module 'arviz' has no attribute 'sample_posterior_predictive'"
+    },
+    "intermittent_patterns": {
+      "model": "intermittent",
+      "success": false,
+      "error": "size does not match the broadcast shape of the parameters. (np.int64(150),), (np.int64(150),), (30,)\nApply node that caused the error: negative_binomial_rv{\"(),()->()\"}(RNG(<Generator(PCG64) at 0x161A449E0>), MakeVector{dtype='int64'}.0, ExpandDims{axis=0}.0, Composite{(i3 / (exp((i2 + (i0 * i1))) + i3))}.0)\nToposort index: 13\nInputs types: [RandomGeneratorType, TensorType(int64, shape=(1,)), TensorType(float64, shape=(1,)), TensorType(float64, shape=(None,))]\nInputs shapes: ['No shapes', (1,), (1,), (30,)]\nInputs strides: ['No strides', (8,), (8,), (8,)]\nInputs values: [Generator(PCG64) at 0x161A449E0, array([150]), array([0.54984653]), 'not shown']\nOutputs clients: [[output[2](negative_binomial_rv{\"(),()->()\"}.0)], [ExpandDims{axis=1}(negative_binomial_rv{\"(),()->()\"}.out)]]\n\nBacktrace when the node is created (use PyTensor flag traceback__limit=N to make it longer):\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/distribution.py\", line 529, in __new__\n    rv_out = cls.dist(*args, **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/mixture.py\", line 205, in dist\n    return super().dist([w, *comp_dists], **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/distribution.py\", line 598, in dist\n    return cls.rv_op(*dist_params, size=create_size, **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/mixture.py\", line 72, in rv_op\n    components = cls._resize_components(size, *components)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/mixture.py\", line 155, in _resize_components\n    return [change_dist_size(component, size) for component in components]\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/shape_utils.py\", line 285, in change_dist_size\n    new_dist = _change_dist_size(op, dist, new_size=new_size, expand=expand)\n  File \"/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/functools.py\", line 934, in wrapper\n    return dispatch(args[0].__class__)(*args, **kw)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/shape_utils.py\", line 312, in change_rv_size\n    new_rv = rv_node.op(*dist_params, size=new_size, dtype=rv.type.dtype)\n\nHINT: Use the PyTensor flag `exception_verbosity=high` for a debug print-out and storage map footprint of this Apply node."
+    },
+    "overall_success": true
+  },
+  "intermittent_zip": {
+    "model": "intermittent_zip",
+    "forecast_correctness": {
+      "model": "intermittent_zip",
+      "success": false,
+      "error": "shape mismatch: objects cannot be broadcast to a single shape.  Mismatch is between arg 0 with shape (120,) and arg 1 with shape (30,).\nApply node that caused the error: poisson_rv{\"()->()\"}(RNG(<Generator(PCG64) at 0x165C75000>), MakeVector{dtype='int64'}.0, Composite{exp((i2 + (i0 * i1)))}.0)\nToposort index: 12\nInputs types: [RandomGeneratorType, TensorType(int64, shape=(1,)), TensorType(float64, shape=(None,))]\nInputs shapes: ['No shapes', (1,), (30,)]\nInputs strides: ['No strides', (8,), (8,)]\nInputs values: [Generator(PCG64) at 0x165C75000, array([120]), 'not shown']\nOutputs clients: [[output[2](poisson_rv{\"()->()\"}.0)], [ExpandDims{axis=1}(poisson_rv{\"()->()\"}.out)]]\n\nBacktrace when the node is created (use PyTensor flag traceback__limit=N to make it longer):\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/distribution.py\", line 529, in __new__\n    rv_out = cls.dist(*args, **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/mixture.py\", line 205, in dist\n    return super().dist([w, *comp_dists], **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/distribution.py\", line 598, in dist\n    return cls.rv_op(*dist_params, size=create_size, **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/mixture.py\", line 72, in rv_op\n    components = cls._resize_components(size, *components)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/mixture.py\", line 155, in _resize_components\n    return [change_dist_size(component, size) for component in components]\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/shape_utils.py\", line 285, in change_dist_size\n    new_dist = _change_dist_size(op, dist, new_size=new_size, expand=expand)\n  File \"/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/functools.py\", line 934, in wrapper\n    return dispatch(args[0].__class__)(*args, **kw)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/shape_utils.py\", line 312, in change_rv_size\n    new_rv = rv_node.op(*dist_params, size=new_size, dtype=rv.type.dtype)\n\nHINT: Use the PyTensor flag `exception_verbosity=high` for a debug print-out and storage map footprint of this Apply node."
+    },
+    "posterior_predictive_checks": {
+      "model": "intermittent_zip",
+      "success": false,
+      "error": "module 'arviz' has no attribute 'sample_posterior_predictive'"
+    },
+    "distribution_compliance": {
+      "model": "intermittent_zip",
+      "success": false,
+      "error": "module 'arviz' has no attribute 'sample_posterior_predictive'"
+    },
+    "intermittent_patterns": {
+      "model": "intermittent",
+      "success": false,
+      "error": "shape mismatch: objects cannot be broadcast to a single shape.  Mismatch is between arg 0 with shape (150,) and arg 1 with shape (30,).\nApply node that caused the error: poisson_rv{\"()->()\"}(RNG(<Generator(PCG64) at 0x161D3C9E0>), MakeVector{dtype='int64'}.0, Composite{exp((i2 + (i0 * i1)))}.0)\nToposort index: 12\nInputs types: [RandomGeneratorType, TensorType(int64, shape=(1,)), TensorType(float64, shape=(None,))]\nInputs shapes: ['No shapes', (1,), (30,)]\nInputs strides: ['No strides', (8,), (8,)]\nInputs values: [Generator(PCG64) at 0x161D3C9E0, array([150]), 'not shown']\nOutputs clients: [[output[2](poisson_rv{\"()->()\"}.0)], [ExpandDims{axis=1}(poisson_rv{\"()->()\"}.out)]]\n\nBacktrace when the node is created (use PyTensor flag traceback__limit=N to make it longer):\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/distribution.py\", line 529, in __new__\n    rv_out = cls.dist(*args, **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/mixture.py\", line 205, in dist\n    return super().dist([w, *comp_dists], **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/distribution.py\", line 598, in dist\n    return cls.rv_op(*dist_params, size=create_size, **kwargs)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/mixture.py\", line 72, in rv_op\n    components = cls._resize_components(size, *components)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/mixture.py\", line 155, in _resize_components\n    return [change_dist_size(component, size) for component in components]\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/shape_utils.py\", line 285, in change_dist_size\n    new_dist = _change_dist_size(op, dist, new_size=new_size, expand=expand)\n  File \"/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/functools.py\", line 934, in wrapper\n    return dispatch(args[0].__class__)(*args, **kw)\n  File \"/Users/sakaya/projects/pymc-marketing/pymc-supply-chain/venv/lib/python3.13/site-packages/pymc/distributions/shape_utils.py\", line 312, in change_rv_size\n    new_rv = rv_node.op(*dist_params, size=new_size, dtype=rv.type.dtype)\n\nHINT: Use the PyTensor flag `exception_verbosity=high` for a debug print-out and storage map footprint of this Apply node."
+    },
+    "overall_success": true
+  },
+  "seasonal": {
+    "model": "seasonal",
+    "forecast_correctness": {
+      "model": "seasonal",
+      "has_nan_inf": "False",
+      "has_negative_forecasts": "False",
+      "success": false,
+      "error": "'forecast_upper'"
+    },
+    "posterior_predictive_checks": {
+      "model": "seasonal",
+      "success": false,
+      "error": "module 'arviz' has no attribute 'sample_posterior_predictive'"
+    },
+    "distribution_compliance": {
+      "model": "seasonal",
+      "success": false,
+      "error": "module 'arviz' has no attribute 'sample_posterior_predictive'"
+    },
+    "seasonal_patterns": {
+      "model": "seasonal",
+      "seasonal_significant": "True",
+      "captures_seasonal_variation": true,
+      "success": true
+    },
+    "overall_success": true
+  }
+}

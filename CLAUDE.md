@@ -2,6 +2,56 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ CRITICAL UPDATES - DECEMBER 2024
+
+### Major Architectural Fixes Applied
+
+After initial development, critical architectural flaws were identified and fixed:
+
+#### 1. **SYSTEMIC FORECASTING FLAW (FIXED)**
+**Problem**: All models used manual forecast reconstruction bypassing PyMC's core functionality
+```python
+# OLD (BROKEN):
+for i in range(n_samples):
+    mu_forecast = intercept_samples[i] + trend_samples[i] * t_future
+    forecast_sample = np.random.normal(mu_forecast, sigma_samples[i])
+```
+
+**Fix**: Now using proper PyMC patterns with `pm.set_data()` and `pm.sample_posterior_predictive()`
+```python
+# NEW (CORRECT):
+with model:
+    pm.set_data({"t_data": future_t, "y_data": np.zeros(n_periods)})
+    posterior_predictive = pm.sample_posterior_predictive(
+        trace, var_names=["likelihood"], predictions=True
+    )
+```
+
+#### 2. **DISTRIBUTION PROBLEMS (FIXED)**
+**Problem**: Normal distribution inappropriate for demand (can be negative!)
+**Fix**: Added support for:
+- `NegativeBinomial`: For overdispersed count data (DEFAULT)
+- `Poisson`: For count data with mean ≈ variance
+- `Gamma`: For continuous positive demand
+- `LogNormal`: For positive continuous with right skew
+
+#### 3. **HIERARCHICAL MODEL BROKEN (FIXED)**
+**Problem**: Forecasts ignored hierarchy, used only global parameters
+**Fix**: Now properly preserves hierarchy levels and generates distinct forecasts per group
+**Removed**: Confusing `pooling_strength` parameter - model now learns pooling from data
+
+#### 4. **INTERMITTENT MODEL BROKEN (FIXED)**
+**Problem**: Generated flat-line forecasts instead of sporadic patterns
+**Fix**: Now properly simulates sporadic demand events using learned distributions
+
+### Key Learnings
+
+1. **Always use PyMC's built-in methods** - Don't manually reconstruct forecasts
+2. **Choose appropriate distributions** - Demand is rarely normally distributed
+3. **Test statistical correctness** - Not just "does it run"
+4. **Hierarchical models must preserve structure** - That's the whole point
+5. **Validate with posterior predictive checks** - Essential for model validation
+
 ## Project Overview
 
 PyMC-Supply-Chain is a comprehensive Bayesian supply chain optimization package built following the patterns and architecture of PyMC-Marketing. It provides enterprise-grade tools for demand forecasting, inventory optimization, network design, and supply chain risk management.
@@ -84,20 +134,77 @@ pymc-supply-chain/
 - `python test_fixed_models.py`: Run PyMC API demonstration
 - `python examples/quickstart.py`: Run example pipeline
 
+## Proper Usage Patterns (Post-Fix)
+
+### Correct Forecasting Pattern
+```python
+# CORRECT way to forecast with PyMC models
+model = DemandForecastModel(distribution="negative_binomial")  # Non-negative
+model.fit(data)
+
+# Forecast uses proper PyMC posterior predictive sampling
+forecast = model.forecast(steps=30)  # Returns DataFrame with uncertainty
+```
+
+### Distribution Selection Guide
+```python
+# For count data (most common for demand):
+model = DemandForecastModel(distribution="negative_binomial")  # Overdispersed counts
+model = DemandForecastModel(distribution="poisson")  # When mean ≈ variance
+
+# For continuous positive demand:
+model = DemandForecastModel(distribution="gamma")  # Flexible shape
+model = DemandForecastModel(distribution="lognormal")  # Right-skewed
+
+# AVOID unless you're sure:
+model = DemandForecastModel(distribution="normal")  # Can produce negative values!
+```
+
+### Hierarchical Model Usage
+```python
+# Hierarchical model now properly handles multiple levels
+hierarchical_model = HierarchicalDemandModel(
+    hierarchy_cols=["region", "store", "product"]
+    # pooling_strength removed - learned from data
+)
+hierarchical_model.fit(data)
+
+# Forecasts are now distinct per hierarchy level
+forecast_store_1 = hierarchical_model.forecast(
+    steps=30, 
+    hierarchy_values={"region": "North", "store": "Store_1", "product": "SKU_A"}
+)
+# This will be different from Store_2!
+```
+
+### Intermittent Demand Pattern
+```python
+# Intermittent model now generates proper sporadic patterns
+intermittent_model = IntermittentDemandModel(method="croston")
+intermittent_model.fit(sparse_demand_data)
+
+# Forecast shows sporadic events, not flat lines
+forecast = intermittent_model.forecast(steps=30)
+# Output: [0, 0, 0, 15, 0, 0, 0, 0, 22, 0, ...]  # Sporadic!
+```
+
 ## Detailed Model Implementations
 
 ### 1. Demand Forecasting Models
 
 #### Base Demand Forecast Model (`demand/base.py`)
-**Mathematical Model:**
+**Mathematical Model (Updated):**
 ```
-y_t = α + βt + S_t + X_t'γ + ε_t
+# Now supports multiple distributions
+y_t ~ Distribution(μ_t, dispersion)
 
-where:
-- y_t = demand at time t
-- α ~ Normal(μ=mean(y), σ=std(y))
-- β ~ Normal(0, 0.1) 
-- S_t ~ Normal(0, 1) for seasonal components
+where μ_t = exp(α + βt + S_t + X_t'γ)  # Link function ensures positive
+
+Distributions:
+- NegativeBinomial(μ, α): DEFAULT - handles overdispersion
+- Poisson(μ): For count data
+- Gamma(μ, σ): For continuous positive
+- LogNormal(log(μ), σ): For right-skewed positive
 - γ ~ Normal(0, 1) for external regressors
 - ε_t ~ Normal(0, σ), σ ~ HalfNormal(std(y))
 ```
@@ -402,6 +509,36 @@ result = location_opt.optimize(max_facilities=3)
 - Shared base classes design
 - Can exchange demand forecasts with MMM models
 
+## Statistical Validation Requirements
+
+### Mandatory Tests for Demand Models
+1. **Forecast Distinctiveness**: Hierarchical models MUST produce different forecasts for different groups
+2. **Distribution Compliance**: Verify outputs match expected distribution (integers for Poisson/NegBin, positive for Gamma)
+3. **Uncertainty Coverage**: 95% credible intervals should contain ~95% of actual values
+4. **Posterior Predictive Checks**: Compare simulated vs observed data statistics
+
+### Example Validation Test
+```python
+def test_hierarchical_forecasts_are_distinct():
+    """Critical test: Hierarchical model must produce different forecasts"""
+    model = HierarchicalDemandModel(hierarchy_cols=["region"])
+    model.fit(data)
+    
+    forecast_north = model.forecast(30, {"region": "North"})
+    forecast_south = model.forecast(30, {"region": "South"})
+    
+    # MUST NOT BE EQUAL - that was the bug!
+    assert not np.allclose(forecast_north["forecast"], forecast_south["forecast"])
+```
+
+## Common Pitfalls to Avoid
+
+1. **DON'T manually reconstruct forecasts** - Use PyMC's posterior predictive sampling
+2. **DON'T use Normal distribution for demand** - It can go negative
+3. **DON'T ignore hierarchy in hierarchical models** - That defeats the purpose
+4. **DON'T generate flat forecasts for intermittent demand** - Must be sporadic
+5. **DON'T test just for "runs without error"** - Test statistical correctness
+
 ## Code Style
 
 - Type hints throughout
@@ -409,3 +546,4 @@ result = location_opt.optimize(max_facilities=3)
 - Max line length: 120
 - Format with `ruff`
 - No comments unless requested
+- ALWAYS validate statistical correctness, not just code execution
